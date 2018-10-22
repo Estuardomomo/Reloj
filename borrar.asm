@@ -13,6 +13,8 @@ Alemania DB 13,10,'Alemania: $'
 EEUU DB 13,10,'EEUU: $'
 Argentina DB 13,10,'Argentina: $'
 Japon DB 13,10,'Japon: $'
+NHora DB 13,10, 'Ingresar nueva hora: $'
+NMin DB 13,10, 'Ingresar minutos: $'
 ;Variables a manipular
 Fecha DB 13,10,'          00/00/00 $'
 Hora DB '  00:00:00 $'
@@ -23,6 +25,8 @@ programa:
     MOV AX, @Data   ;Se obtiene la direccion de inicio del de datos.
     MOV DS, AX      ;Signamos al registro data segment la direccion de inicio
     Menu:           ;Menu principal
+    CALL ObtFecha       ;Obtiene fecha de la computadora.
+    CALL ObtHora        ;Obtener la hora de la computadora
     LEA DX,Linea
     CALL Imprimir
     LEA DX,P1
@@ -46,15 +50,14 @@ programa:
     JL Tres
     JLE Cuatro
     CMP AL,6
-    JL Cinco
+    JL Cinco1
     JMP Finalizar
     Uno:
     LEA DX,P1
     CALL Imprimir
     CALL ObtFecha       ;Obtiene fecha de la computadora.
-    CALL ImprimirF      ;Imprime en pantalla la variable Fecha
     CALL ObtHora        ;Obtener la hora de la computadora
-    CALL ImprimirH      ;Imprime en pantalla la variable Hora
+    CALL ImprimirF      ;Imprime fecha y hora en pantalla
     CALL Limpiar
     JMP Menu
     Dos:
@@ -63,14 +66,11 @@ programa:
     LEA DX,UTC
     CALL Imprimir
     CALL Leer
-    MOV BL,AL           ;Guardar el simbolo en BL
+    MOV CL,AL           ;Guardar el simbolo en CL
     CALL Leer
-    MOV AH,AL           ;Guardar primer digito en AH
+    MOV CH,AL           ;Guardar primer digito en CH
     CALL Leer           ;Guardar segundo digito en AL
-    CALL ObtFecha       ;Obtiene fecha de la computadora.
-    CALL ImprimirF      ;Imprime en pantalla la variable Fecha
-    CALL ObtHora        ;Obtener la hora de la computadora
-    CALL ImprimirH      ;Imprime en pantalla la variable Hora
+    CALL ImprimirF      ;Imprime en pantalla la fecha y hora
     CALL Limpiar
     JMP Menu
     Tres:
@@ -78,9 +78,32 @@ programa:
     CALL Imprimir
     CALL Limpiar
     JMP Menu
+    Cinco1:             ;Salto intermedio
+    JMP Cinco
     Cuatro:
     LEA DX,P4
     CALL Imprimir
+    LEA DX,NHora        ;Hora = (Decenas*10) + unidades
+    CALL Imprimir
+    CALL Leer
+    MOV BL,10D
+    MUL BL
+    MOV CH,AL           ;Primer digito * 10
+    CALL Leer
+    ADD CH,AL          ; + Segundo digito
+    LEA DX,NMin
+    CALL Imprimir      ;Min = (Decenas *10) + unidades
+    CALL Leer
+    MOV BL,10D
+    MUL BL
+    MOV CL,AL       ;Primer digito * 10
+    CALL Leer
+    ADD CL,AL       ; + Segundo digito
+    SUB CH,16D      ;Corrigo el formato de las horas
+    SUB CL,16D      ;Corrigo el formato de los min
+    MOV DH,00D      ;DH = SEG, DL =Centecima (Intentar cambiar Centecimas dara error)
+    MOV AH,2DH
+    int 21h
     CALL Limpiar
     JMP Menu
     Cinco:
@@ -110,12 +133,16 @@ programa:
     INT 21h
     ret
     ImprimirNum endp
+    ImprimirF proc near
+    LEA DX,Fecha
+    CALL Imprimir
+    LEA DX,Hora
+    CALL Imprimir
+    ret
+    ImprimirF endp
     ObtHora proc near
     MOV AH,2CH          ;Obtener la hora CH=Hora; CL=Min; DH=Seg
     INT 21H
-    ret
-    ObtHora endp
-    ImprimirH proc near
     MOV AL,CH           ;Obtener hora de dos digitos
     MOV AH,0
     AAM
@@ -137,24 +164,19 @@ programa:
     ADD AH,30H
     MOV Hora[8],AH
     MOV Hora[9],AL      ;Escribir seg de dos digitos
-    LEA DX,Hora
-    CALL Imprimir
     ret
-    ImprimirH endp
+    ObtHora endp
     ObtFecha proc near
     MOV AH,2AH          ;Obtener la fecha AL=diaS; CX=ano; DH=mes; DL=DiaM
     INT 21H
-    ret
-    ObtFecha endp
-    ImprimirF proc near
-    CALL diaSem         ;Escribe el d?a de la semana seg?n el valor en AL
+    CALL diaSem         ;Escribe el dia de la semana segun el valor en AL
     MOV AL,DL           ;Obtener el dia de dos digitos.
     MOV AH,0
     AAM
     ADD AH,30H
     ADD AL,30H
     MOV Fecha[12],AH
-    MOV Fecha[13],AL    ;Escribir el d?a de dos digitos
+    MOV Fecha[13],AL    ;Escribir el dia de dos digitos
     MOV AL,DH           ;Obtener el mes de dos digitos.
     MOV AH,0
     AAM
@@ -162,17 +184,15 @@ programa:
     ADD AL,30H
     MOV Fecha[15],AH
     MOV Fecha[16],AL    ;Escribir el mes de dos digitos
-    MOV AX,CX           ;Obtener el a?o de cuatro digitos
+    MOV AX,CX           ;Obtener el ano de cuatro digitos
     ADD AX,0F830H
     AAM
     ADD AL,30H
     ADD AH,30H
     MOV Fecha[18],AH
-    MOV Fecha[19],AL    ;Escribir a?o de dos digitos
-    LEA DX, Fecha
-    CALL Imprimir
+    MOV Fecha[19],AL    ;Escribir ano de dos digitos
     ret
-    ImprimirF endp
+    ObtFecha endp
     Limpiar proc near ;Muestra un mensaje y limpia la pantalla
     LEA DX,msj
     CALL Imprimir
@@ -275,5 +295,23 @@ programa:
     Terminar:
     ret
     DiaSem endp
+    ModHora proc near   ;Modifica la hora, CH =+/-,CL=1er digito, BL=2ndo digito 
+    CMP CH,43D          ;43 es el ASCII del simbolo: +
+    JE Suma
+    SUB Hora[2],CL
+    SUB Hora[3],BL
+    JMP Acabar
+    Suma:
+    SUB Hora[2],CL
+    SUB Hora[3],BL
+    Acabar:
+    ;Metodo que corrige todo.
+    ret
+    ModHora endp
+    Corregir proc near  ;Metodo que corrige las variables.
+    CMP Hora[2],9
+    
+    ret
+    Corregir endp
         .Stack
 END programa
