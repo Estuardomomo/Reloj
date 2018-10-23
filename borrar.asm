@@ -19,6 +19,7 @@ NMin DB 13,10, 'Ingresar minutos: $'
 Fecha DB 13,10,'          00/00/00 $'
 Hora DB '  00:00:00 $'
 UTC DB 13,10, 'UTC$'
+Aux DB 0
 .Code
 ;Iniciar Programa
 programa:
@@ -48,7 +49,7 @@ programa:
     JLE Dos
     CMP AL,4
     JL Tres
-    JLE Cuatro
+    JLE Cuatro1
     CMP AL,6
     JL Cinco1
     JMP Finalizar
@@ -63,23 +64,71 @@ programa:
     Dos:
     LEA DX,P2
     CALL Imprimir
+    CALL CorregirUTC
     LEA DX,UTC
     CALL Imprimir
     CALL Leer
-    MOV CL,AL           ;Guardar el simbolo en CL
+    MOV DH,AL           ;Guardar el simbolo en DH
     CALL Leer
     MOV CH,AL           ;Guardar primer digito en CH
-    CALL Leer           ;Guardar segundo digito en AL
+    SUB CH,30H
+    CALL Leer
+    MOV CL,AL           ;Guardar segundo digito en CL
+    SUB CL,30H
+    CALL ModHora
     CALL ImprimirF      ;Imprime en pantalla la fecha y hora
     CALL Limpiar
     JMP Menu
+    Cuatro1:            ;Salto intermedio
+    JMP Cuatro
+    Cinco1:             ;Salto intermedio
+    JMP Cinco
     Tres:
     LEA DX,P3
     CALL Imprimir
+    LEA DX,India        ;INDIA: UTC + 5:30
+    CALL Imprimir
+    CALL CorregirUTC    ;Sumar 6 a la hora de la computadora
+    MOV DH,43D          ;ASCII del simbolo: +
+    MOV CH,0
+    MOV CL,5
+    CALL ModHora        ;Modifica la hora DH =+/-, CH=1er digito, CL=2ndo digito
+    LEA DX,Fecha
+    CALL Imprimir
+    LEA DX,Alemania     ;Alemania: UTC +2
+    CALL Imprimir
+    MOV DH,45D          ;ASCII del simbolo: -
+    MOV CH,0
+    MOV CL,3
+    CALL ModHora        ;Modifica la hora DH =+/-, CH=1er digito, CL=2ndo digito
+    LEA DX,Fecha
+    CALL Imprimir
+    LEA DX,EEUU         ;EEUU: UTC -8
+    CALL Imprimir
+    MOV DH,45D          ;ASCII del simbolo: -
+    MOV CH,1
+    MOV CL,0
+    CALL ModHora        ;Modifica la hora DH =+/-, CH=1er digito, CL=2ndo digito
+    LEA DX,Fecha
+    CALL Imprimir
+    LEA DX,Argentina    ;Argentina: UTC -3
+    CALL Imprimir
+    MOV DH,43D          ;ASCII del simbolo: +
+    MOV CH,0
+    MOV CL,5
+    CALL ModHora        ;Modifica la hora DH =+/-, CH=1er digito, CL=2ndo digito
+    LEA DX,Fecha
+    CALL Imprimir
+    LEA DX,Japon
+    CALL Imprimir       ;Japon: UTC +9
+    MOV DH,43D          ;ASCII del simbolo: +
+    MOV CH,1
+    MOV CL,2
+    CALL ModHora        ;Modifica la hora DH =+/-, CH=1er digito, CL=2ndo digito
+    LEA DX,Fecha
+    CALL Imprimir
     CALL Limpiar
     JMP Menu
-    Cinco1:             ;Salto intermedio
-    JMP Cinco
     Cuatro:
     LEA DX,P4
     CALL Imprimir
@@ -184,8 +233,8 @@ programa:
     ADD AL,30H
     MOV Fecha[15],AH
     MOV Fecha[16],AL    ;Escribir el mes de dos digitos
-    MOV AX,CX           ;Obtener el ano de cuatro digitos
-    ADD AX,0F830H
+    ADD CX,0F830H
+    MOV AX,CX           ;Obtener el ano de dos digitos
     AAM
     ADD AL,30H
     ADD AH,30H
@@ -202,7 +251,8 @@ programa:
     INT 10h
     ret
     Limpiar endp
-    DiaSem proc near ;Escribe el d?a de la semana seg?n AL
+    DiaSem proc near ;Escribe el d?a de la semana segun AL
+    MOV Aux,AL          ;Guardo el dato por si ocurre un cambio de fecha
     CMP AL,1
     JL Domingo
     JLE Lunes
@@ -295,23 +345,115 @@ programa:
     Terminar:
     ret
     DiaSem endp
-    ModHora proc near   ;Modifica la hora, CH =+/-,CL=1er digito, BL=2ndo digito 
-    CMP CH,43D          ;43 es el ASCII del simbolo: +
+    ModHora proc near   ;Modifica la hora DH =+/-, CH=1er digito, CL=2ndo digito 
+    ;Obtener la hora actual en DL
+    MOV AL,Hora[2]
+    SUB AL,30H
+    MOV BL,10D
+    MUL BL
+    ADD AL,Hora[3]
+    SUB AL,30H
+    MOV DL,AL
+    ;Obtener la hora que ingres? el usuario en CH
+    MOV AL,CH
+    MUL BL
+    ADD AL,CL
+    MOV CH,AL
+    ;Obtener Dia actual en CL
+    MOV AL,Fecha[12]
+    SUB AL,30H
+    MUL BL
+    ADD AL,Fecha[13]
+    SUB AL,30H
+    MOV CL,AL
+    MOV AL,CH
+    CMP DH,43D          ;43 es el ASCII del simbolo: +
     JE Suma
-    SUB Hora[2],CL
-    SUB Hora[3],BL
+    ;Ver si hay que cambiar de fecha
+    CMP DL,AL
+    JL Menor            ;hora actual < hora usuario
+    SUB DL,AL           ;Hora actual = hora actual - hora usuario
+    MOV AL,DL
+    AAM
+    ADD AH,30H
+    ADD AL,30H
+    MOV Hora[2],AH
+    MOV Hora[3],AL
+    JMP Acabar
+    Menor:
+    SUB AL,DL           ;Hora usuario - hora actual
+    MOV DL,24
+    SUB DL,AL           ;24 - (hora usuario - hora actual)
+    MOV AL,DL
+    AAM
+    ADD AH,30H
+    ADD AL,30H
+    MOV Hora[2],AH
+    MOV Hora[3],AL
+    ;Dia --
+    MOV AL,CL
+    DEC AL
+    AAM
+    ADD AH,30H
+    ADD AL,30H
+    MOV Fecha[12],AH
+    MOV Fecha[13],AL
+    ;Escribir el dia anterior
+    MOV AL,AUX
+    CMP AL,0
+    JNE NoReseteo   ;Si no es necesario no colocarle 7 al dia de la semana
+    MOV AL,7
+    NoReseteo:  
+    DEC AL
+    CALL DiaSem
     JMP Acabar
     Suma:
-    SUB Hora[2],CL
-    SUB Hora[3],BL
+    ;Horas faltantes para el cambio de fecha (BH)   
+    MOV BH,23D
+    SUB BH,DL 
+    ;Escribir la hora en la variable
+    CMP AL,BH   ;AL - BH > 0
+    JG Mayor    ;AL > BH
+    ADD AL,DL
+    AAM
+    ADD AH,30H
+    ADD AL,30H
+    MOV Hora[2],AH
+    MOV Hora[3],AL
+    JMP Acabar
+    Mayor:
+    SUB AL,BH
+    DEC AL
+    AAM
+    ADD AH,30H
+    ADD AL,30H
+    MOV Hora[2],AH
+    MOV Hora[3],AL
+    ;D?a++
+    MOV AL,CL
+    INC AL
+    AAM
+    ADD AH,30H
+    ADD AL,30H
+    MOV Fecha[12],AH
+    MOV Fecha[13],AL
+    ;Escribir el siguiente d?a
+    INC Aux
+    MOV AL,Aux
+    CMP AL,7
+    JNE NoReset         ;Si no es necesario no colocarle 0 al dia de la semana
+    MOV AL,0
+    NoReset:
+    CALL DiaSem
     Acabar:
-    ;Metodo que corrige todo.
     ret
     ModHora endp
-    Corregir proc near  ;Metodo que corrige las variables.
-    CMP Hora[2],9
-    
+    CorregirUTC proc near
+    MOV DH,43D          ;43 es el ASCII del simbolo: +
+    MOV CH,0
+    MOV CL,6
+    CALL ModHora        ;Modifica la hora DH =+/-, CH=1er digito, CL=2ndo digito 
     ret
-    Corregir endp
+    CorregirUTC endp
         .Stack
 END programa
