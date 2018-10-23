@@ -95,6 +95,8 @@ programa:
     CALL ModHora        ;Modifica la hora DH =+/-, CH=1er digito, CL=2ndo digito
     LEA DX,Fecha
     CALL Imprimir
+    LEA DX,Hora
+    CALL Imprimir
     LEA DX,Alemania     ;Alemania: UTC +2
     CALL Imprimir
     MOV DH,45D          ;ASCII del simbolo: -
@@ -102,6 +104,8 @@ programa:
     MOV CL,3
     CALL ModHora        ;Modifica la hora DH =+/-, CH=1er digito, CL=2ndo digito
     LEA DX,Fecha
+    CALL Imprimir
+    LEA DX,Hora
     CALL Imprimir
     LEA DX,EEUU         ;EEUU: UTC -8
     CALL Imprimir
@@ -111,6 +115,8 @@ programa:
     CALL ModHora        ;Modifica la hora DH =+/-, CH=1er digito, CL=2ndo digito
     LEA DX,Fecha
     CALL Imprimir
+    LEA DX,Hora
+    CALL Imprimir
     LEA DX,Argentina    ;Argentina: UTC -3
     CALL Imprimir
     MOV DH,43D          ;ASCII del simbolo: +
@@ -119,6 +125,8 @@ programa:
     CALL ModHora        ;Modifica la hora DH =+/-, CH=1er digito, CL=2ndo digito
     LEA DX,Fecha
     CALL Imprimir
+    LEA DX,Hora
+    CALL Imprimir
     LEA DX,Japon
     CALL Imprimir       ;Japon: UTC +9
     MOV DH,43D          ;ASCII del simbolo: +
@@ -126,6 +134,8 @@ programa:
     MOV CL,2
     CALL ModHora        ;Modifica la hora DH =+/-, CH=1er digito, CL=2ndo digito
     LEA DX,Fecha
+    CALL Imprimir
+    LEA DX,Hora
     CALL Imprimir
     CALL Limpiar
     JMP Menu
