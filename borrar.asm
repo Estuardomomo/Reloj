@@ -21,6 +21,16 @@ Hora DB '  00:00:00 $'
 UTC DB 13,10, 'UTC$'
 Aux DB 0
 Min DB 0
+;Graficar el circulo
+    XC    DW 320  ; Pos X del centro
+    YC    DW 350  ; Pos Y del centro
+    TEMPO DW ?    ; Temporal    
+    COLOR DB 20   ; Color inicial
+    LAST  DB "5"
+    RAD   DW 120  ; Radio del c?rculo
+    HOR   DW ?
+    VER   DW ?
+    VID   DB ?  ; Salvamos el modo de video :)
 .Code
 ;Iniciar Programa
 programa:
@@ -189,8 +199,7 @@ programa:
     CALL Limpiar
     JMP Menu
     Cinco:
-    LEA DX,P5
-    CALL Imprimir
+    CALL Reloj
     CALL Limpiar
     JMP Menu
     ;finalizar el programa
@@ -397,7 +406,6 @@ programa:
     INC CL
     SUB AL,59
     Proseguir:
-    INC AL
     AAM
     ADD AH,30H
     ADD AL,30H
@@ -526,5 +534,277 @@ programa:
     CALL ModHora        ;Modifica la hora DH =+/-, CH=1er digito, CL=2ndo digito 
     ret
     CorregirUTC endp
-        .Stack
+    
+    PUNTEAR PROC NEAR
+    ; Grafica un punto en CX,DX 
+    MOV AH,0Ch      ; Petici?n para escribir un punto
+    MOV AL,COLOR    ; Color del pixel
+    MOV BH,00h      ; P?gina
+    INT 10H         ; Llamada al BIOS
+    RET
+    PUNTEAR ENDP
+    GRAFICAR PROC NEAR
+; Graficamos todo el circulo !
+    MOV HOR,0
+    MOV AX,RAD
+    MOV VER,AX
+    
+    BUSQUEDA:
+    CALL BUSCAR
+    
+    MOV AX,VER
+    SUB AX,HOR
+    CMP AX,1
+    JA BUSQUEDA
+    RET
+    GRAFICAR ENDP   
+    BUSCAR PROC NEAR
+; Se encarga de buscar la coord del pixel sgte.
+    INC HOR ; Horizontalmente siempre aumenta 1
+    
+    MOV AX,HOR  
+    MUL AX
+    MOV BX,AX ; X^2 se almacena en BX
+    MOV AX,VER
+    MUL AX    ; AX almacena Y^2
+    ADD BX,AX ; BX almacena X^2 + Y^2
+    MOV AX,RAD
+    MUL AX    ; AX almacena R^2
+    SUB AX,BX ; AX almacena R^2 - (X^2+Y^2)
+    
+    MOV TEMPO,AX
+    
+    MOV AX,HOR  
+    MUL AX
+    MOV BX,AX ; BX almacena X^2
+    MOV AX,VER
+    DEC AX    ; una unidad menos para Y (?VAYA DIFERENCIA!)
+    MUL AX    ; AX almacena Y^2
+    ADD BX,AX ; BX almacena X^2 + Y^2
+    MOV AX,RAD
+    MUL AX    ; AX almacena R^2
+    SUB AX,BX ; AX almacena R^2 - (X^2+Y^2)
+    
+    CMP TEMPO,AX
+    JB NODEC
+    DEC VER
+    NODEC:
+    CALL REPUNTEAR
+    PUSH VER
+    PUSH HOR
+    POP VER
+    POP HOR   ; Cambiamos valores
+    CALL REPUNTEAR
+    PUSH VER
+    PUSH HOR
+    POP VER
+    POP HOR   ; Devolvemos originales 
+    RET
+    BUSCAR ENDP
+    REPUNTEAR PROC NEAR
+    ; I CUADRANTE
+    MOV CX,XC
+    ADD CX,HOR
+    MOV DX,YC
+    SUB DX,VER
+    CALL PUNTEAR
+    ; IV CUADRANTE
+    MOV DX,YC
+    ADD DX,VER
+    CALL PUNTEAR
+    ; III CUADRANTE
+    MOV CX,XC
+    SUB CX,HOR
+    CALL PUNTEAR
+    ; II CUADRANTE
+    MOV DX,YC
+    SUB DX,VER
+    CALL PUNTEAR
+    RET
+    REPUNTEAR ENDP
+    Cursor proc near
+    MOV BH,0
+    MOV AH,02H
+    INT 10H
+    RET
+    Cursor endp
+    
+    Reloj proc near
+    MOV AH,0Fh  ; Petici?n de obtenci?n de modo de v?deo
+    INT 10h     ; Llamada al BIOS
+    MOV VID,AL
+
+    MOV AH,00h  ; Funci?n para establecer modo de video
+    MOV AL,12h  ; Modo gr?fico resoluci?n 640x480
+    INT 10h 
+    
+    MOV BX, RAD
+    ;DL = COLUMNA, DH = FILA
+    ;Imprimir 1
+    MOV DH,16d
+    MOV DL,45d
+    CALL Cursor
+    MOV DL,'0'
+    SUB DL,30H
+    CALL ImprimirNum
+    MOV DH,16d
+    MOV DL,46d
+    CALL Cursor
+    MOV DL,'1'
+    SUB DL,30H
+    CALL ImprimirNum
+    ;Imprimir 2
+    MOV DH,18d
+    MOV DL,49d
+    CALL Cursor
+    MOV DL,'0'
+    SUB DL,30H
+    CALL ImprimirNum
+    MOV DH,18d
+    MOV DL,50d
+    CALL Cursor
+    MOV DL,'2'
+    SUB DL,30H
+    CALL ImprimirNum
+    ;Imprimir 3
+    MOV DH,21d
+    MOV DL,51d
+    CALL Cursor
+    MOV DL,'0'
+    SUB DL,30H
+    CALL ImprimirNum
+    MOV DH,21d
+    MOV DL,52d
+    CALL Cursor
+    MOV DL,'3'
+    SUB DL,30H
+    CALL ImprimirNum
+    ;Imprimir 4
+    MOV DH,24d
+    MOV DL,49d
+    CALL Cursor
+    MOV DL,'0'
+    SUB DL,30H
+    CALL ImprimirNum
+    MOV DH,24d
+    MOV DL,50d
+    CALL Cursor
+    MOV DL,'4'
+    SUB DL,30H
+    CALL ImprimirNum
+    ;Imprimir 5
+    MOV DH,27d
+    MOV DL,45d
+    CALL Cursor
+    MOV DL,'0'
+    SUB DL,30H
+    CALL ImprimirNum
+    MOV DH,27d
+    MOV DL,46d
+    CALL Cursor
+    MOV DL,'5'
+    SUB DL,30H
+    CALL ImprimirNum
+    ;Imprimir 6
+    MOV DH,28d
+    MOV DL,39d
+    CALL Cursor
+    MOV DL,'0'
+    SUB DL,30H
+    CALL ImprimirNum
+    MOV DH,28d
+    MOV DL,40d
+    CALL Cursor
+    MOV DL,'6'
+    SUB DL,30H
+    CALL ImprimirNum
+    ;Imprimir 7
+    MOV DH,27d
+    MOV DL,32d
+    CALL Cursor
+    MOV DL,'0'
+    SUB DL,30H
+    CALL ImprimirNum
+    MOV DH,27d
+    MOV DL,33d
+    CALL Cursor
+    MOV DL,'7'
+    SUB DL,30H
+    CALL ImprimirNum
+    ;Imprimir 8
+    MOV DH,24d
+    MOV DL,28d
+    CALL Cursor
+    MOV DL,'0'
+    SUB DL,30H
+    CALL ImprimirNum
+    MOV DH,24d
+    MOV DL,29d
+    CALL Cursor
+    MOV DL,'8'
+    SUB DL,30H
+    CALL ImprimirNum
+    ;Imprimir 9
+    MOV DH,21d
+    MOV DL,26d
+    CALL Cursor
+    MOV DL,'0'
+    SUB DL,30H
+    CALL ImprimirNum
+    MOV DH,21d
+    MOV DL,27d
+    CALL Cursor
+    MOV DL,'9'
+    SUB DL,30H
+    CALL ImprimirNum
+    ;Imprimir 10
+    MOV DH,18d
+    MOV DL,28d
+    CALL Cursor
+    MOV DL,'1'
+    SUB DL,30H
+    CALL ImprimirNum
+    MOV DH,18d
+    MOV DL,29d
+    CALL Cursor
+    MOV DL,'0'
+    SUB DL,30H
+    CALL ImprimirNum
+    ;Imprimir 11
+    MOV DH,16d
+    MOV DL,32d
+    CALL Cursor
+    MOV DL,'1'
+    SUB DL,30H
+    CALL ImprimirNum
+    MOV DH,16d
+    MOV DL,33d
+    CALL Cursor
+    MOV DL,'1'
+    SUB DL,30H
+    CALL ImprimirNum
+    ;Imprimir 12
+    MOV DH,15d
+    MOV DL, 39d
+    CALL Cursor
+    MOV DL,'1'
+    SUB DL,30H
+    CALL ImprimirNum
+    MOV DH,15d
+    MOV DL, 40d
+    CALL Cursor
+    MOV DL,'2'
+    SUB DL,30H
+    CALL ImprimirNum
+    ;Dibujar el circulo
+    MOV CX,XC
+    MOV DX,YC
+    CALL PUNTEAR
+    CALL Graficar
+    MOV DH,0
+    MOV DL,0
+    CALL Cursor
+    ret
+    Reloj end
+    .Stack
 END programa
