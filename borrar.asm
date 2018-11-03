@@ -31,6 +31,10 @@ Min DB 0
     HOR   DW ?
     VER   DW ?
     VID   DB ?  ; Salvamos el modo de video :)
+    NUM   DB 48D
+    NUM2  DB 49D
+    DIR   DB 0
+    DIR2  DB 0
 .Code
 ;Iniciar Programa
 programa:
@@ -103,22 +107,22 @@ programa:
     Cinco1:             ;Salto intermedio
     JMP Cinco
     Tres:
-    LEA DX,P3
-    CALL Imprimir
-    LEA DX,India        ;INDIA: UTC + 5:30
-    CALL Imprimir
     CALL CorregirUTC    ;Sumar 6 a la hora de la computadora
     MOV DH,43D          ;ASCII del simbolo: +
     MOV CH,0
     MOV CL,5
     MOV Min,30
     CALL ModHora        ;Modifica la hora DH =+/-, CH=1er digito, CL=2ndo digito
+    CALL Reloj
+    LEA DX,P3
+    CALL Imprimir
+    LEA DX,India        ;INDIA: UTC + 5:30
+    CALL Imprimir
     LEA DX,Fecha
     CALL Imprimir
     LEA DX,Hora
     CALL Imprimir
-    LEA DX,Alemania     ;Alemania: UTC +2
-    CALL Imprimir
+    CALL Limpiar
     CALL ObtHora        ;Restablecer el horario UTC
     CALL ObtFecha
     CALL CorregirUTC
@@ -127,12 +131,14 @@ programa:
     MOV CL,2
     MOV Min,0
     CALL ModHora        ;Modifica la hora DH =+/-, CH=1er digito, CL=2ndo digito
+    CALL Reloj
+    LEA DX,Alemania     ;Alemania: UTC +2
+    CALL Imprimir
     LEA DX,Fecha
     CALL Imprimir
     LEA DX,Hora
     CALL Imprimir
-    LEA DX,EEUU         ;EEUU: UTC -4
-    CALL Imprimir
+    CALL Limpiar
     CALL ObtHora        ;Restablecer el horario UTC
     CALL ObtFecha
     CALL CorregirUTC
@@ -140,12 +146,14 @@ programa:
     MOV CH,0
     MOV CL,4
     CALL ModHora        ;Modifica la hora DH =+/-, CH=1er digito, CL=2ndo digito
+    CALL Reloj
+    LEA DX,EEUU         ;EEUU: UTC -4
+    CALL Imprimir
     LEA DX,Fecha
     CALL Imprimir
     LEA DX,Hora
     CALL Imprimir
-    LEA DX,Argentina    ;Argentina: UTC -3
-    CALL Imprimir
+    CALL Limpiar
     CALL ObtHora        ;Restablecer el horario UTC
     CALL ObtFecha
     CALL CorregirUTC
@@ -153,12 +161,14 @@ programa:
     MOV CH,0
     MOV CL,3
     CALL ModHora        ;Modifica la hora DH =+/-, CH=1er digito, CL=2ndo digito
+    CALL Reloj
+    LEA DX,Argentina    ;Argentina: UTC -3
+    CALL Imprimir
     LEA DX,Fecha
     CALL Imprimir
     LEA DX,Hora
     CALL Imprimir
-    LEA DX,Japon
-    CALL Imprimir       ;Japon: UTC +9
+    CALL Limpiar
     CALL ObtHora
     CALL ObtFecha
     CALL CorregirUTC
@@ -166,6 +176,9 @@ programa:
     MOV CH,0
     MOV CL,9
     CALL ModHora        ;Modifica la hora DH =+/-, CH=1er digito, CL=2ndo digito
+    CALL Reloj
+    LEA DX,Japon
+    CALL Imprimir       ;Japon: UTC +9
     LEA DX,Fecha
     CALL Imprimir
     LEA DX,Hora
@@ -639,163 +652,105 @@ programa:
     INT 10h 
     
     MOV BX, RAD
+    MOV NUM,0
+    MOV NUM2,1
     ;DL = COLUMNA, DH = FILA
     ;Imprimir 1
     MOV DH,16d
     MOV DL,45d
     CALL Cursor
-    MOV DL,'0'
-    SUB DL,30H
-    CALL ImprimirNum
-    MOV DH,16d
-    MOV DL,46d
-    CALL Cursor
-    MOV DL,'1'
-    SUB DL,30H
-    CALL ImprimirNum
+    MOV DIR,46D
+    MOV DIR2,16D
+    CALL MiColor
     ;Imprimir 2
+    INC NUM2
     MOV DH,18d
     MOV DL,49d
     CALL Cursor
-    MOV DL,'0'
-    SUB DL,30H
-    CALL ImprimirNum
-    MOV DH,18d
-    MOV DL,50d
-    CALL Cursor
-    MOV DL,'2'
-    SUB DL,30H
-    CALL ImprimirNum
+    MOV DIR,50D
+    MOV DIR2,18D
+    CALL MiColor
     ;Imprimir 3
+    INC NUM2
     MOV DH,21d
     MOV DL,51d
     CALL Cursor
-    MOV DL,'0'
-    SUB DL,30H
-    CALL ImprimirNum
-    MOV DH,21d
-    MOV DL,52d
-    CALL Cursor
-    MOV DL,'3'
-    SUB DL,30H
-    CALL ImprimirNum
+    MOV DIR,52D
+    MOV DIR2,21D
+    CALL MiColor
     ;Imprimir 4
+    inc NUM2
     MOV DH,24d
     MOV DL,49d
     CALL Cursor
-    MOV DL,'0'
-    SUB DL,30H
-    CALL ImprimirNum
-    MOV DH,24d
-    MOV DL,50d
-    CALL Cursor
-    MOV DL,'4'
-    SUB DL,30H
-    CALL ImprimirNum
+    MOV DIR,50D
+    MOV DIR2,24D
+    CALL MiColor
     ;Imprimir 5
+    INC NUM2
     MOV DH,27d
     MOV DL,45d
     CALL Cursor
-    MOV DL,'0'
-    SUB DL,30H
-    CALL ImprimirNum
-    MOV DH,27d
-    MOV DL,46d
-    CALL Cursor
-    MOV DL,'5'
-    SUB DL,30H
-    CALL ImprimirNum
+    MOV DIR,46D
+    MOV DIR2,27D
+    CALL MiColor
     ;Imprimir 6
+    INC NUM2
     MOV DH,28d
     MOV DL,39d
     CALL Cursor
-    MOV DL,'0'
-    SUB DL,30H
-    CALL ImprimirNum
-    MOV DH,28d
-    MOV DL,40d
-    CALL Cursor
-    MOV DL,'6'
-    SUB DL,30H
-    CALL ImprimirNum
+    MOV DIR,40D
+    MOV DIR2,28D
+    CALL MiColor
     ;Imprimir 7
+    INC NUM2
     MOV DH,27d
     MOV DL,32d
     CALL Cursor
-    MOV DL,'0'
-    SUB DL,30H
-    CALL ImprimirNum
-    MOV DH,27d
-    MOV DL,33d
-    CALL Cursor
-    MOV DL,'7'
-    SUB DL,30H
-    CALL ImprimirNum
+    MOV DIR,33D
+    MOV DIR2,27D
+    CALL MiColor
     ;Imprimir 8
+    INC NUM2
     MOV DH,24d
     MOV DL,28d
     CALL Cursor
-    MOV DL,'0'
-    SUB DL,30H
-    CALL ImprimirNum
-    MOV DH,24d
-    MOV DL,29d
-    CALL Cursor
-    MOV DL,'8'
-    SUB DL,30H
-    CALL ImprimirNum
+    MOV DIR,29d
+    MOV DIR2,24d
+    CALL MiColor
     ;Imprimir 9
+    INC NUM2
     MOV DH,21d
     MOV DL,26d
     CALL Cursor
-    MOV DL,'0'
-    SUB DL,30H
-    CALL ImprimirNum
-    MOV DH,21d
-    MOV DL,27d
-    CALL Cursor
-    MOV DL,'9'
-    SUB DL,30H
-    CALL ImprimirNum
+    MOV DIR,27d
+    MOV DIR2,21d
+    CALL MiColor
     ;Imprimir 10
+    INC NUM
+    MOV NUM2,0
     MOV DH,18d
     MOV DL,28d
     CALL Cursor
-    MOV DL,'1'
-    SUB DL,30H
-    CALL ImprimirNum
-    MOV DH,18d
-    MOV DL,29d
-    CALL Cursor
-    MOV DL,'0'
-    SUB DL,30H
-    CALL ImprimirNum
+    MOV DIR,29D
+    MOV DIR2,18D
+    CALL MiColor
     ;Imprimir 11
+    INC NUM2
     MOV DH,16d
     MOV DL,32d
     CALL Cursor
-    MOV DL,'1'
-    SUB DL,30H
-    CALL ImprimirNum
-    MOV DH,16d
-    MOV DL,33d
-    CALL Cursor
-    MOV DL,'1'
-    SUB DL,30H
-    CALL ImprimirNum
+    MOV DIR,33D
+    MOV DIR2,16D
+    CALL MiColor
     ;Imprimir 12
+    INC NUM2
     MOV DH,15d
     MOV DL, 39d
     CALL Cursor
-    MOV DL,'1'
-    SUB DL,30H
-    CALL ImprimirNum
-    MOV DH,15d
-    MOV DL, 40d
-    CALL Cursor
-    MOV DL,'2'
-    SUB DL,30H
-    CALL ImprimirNum
+    MOV DIR,40D
+    MOV DIR2,15D
+    CALL MiColor
     ;Dibujar el circulo
     MOV CX,XC
     MOV DX,YC
@@ -805,6 +760,62 @@ programa:
     MOV DL,0
     CALL Cursor
     ret
-    Reloj end
+    Reloj endP
+    MiColor proc near
+    MOV AL,NUM
+    MOV BL,10D
+    MUL BL
+    ADD AL,NUM2
+    MOV CL,AL       ;VALOR HORA EN CL
+    MOV AL, Hora[2]
+    SUB AL,30H
+    MUL BL
+    ADD AL, Hora[3]
+    sub AL,30h
+    CMP AL,0
+    JNE Kevin       ;Si no es cero no lo convierto
+    MOV AL,12
+    Kevin:
+    CMP AL,12       ;si es mayor a doce restarle 12
+    JLE Andrino
+    SUB AL,12
+    Andrino:
+    CMP CL,AL
+    JNE Blanco  ;Si no son iguales pintar de blanco
+    mov AL,NUM
+    ADD AL,30H
+    MOV BL, 14h ;Pintar de amarillo si son iguales
+    MOV CX, 1
+    MOV AH,09H
+    INT 10H
+    MOV DL,DIR
+    MOV DH,DIR2
+    CALL Cursor
+    mov AL,NUM2
+    ADD AL,30H
+    MOV BL, 14h ;Pintar de amarillo si son iguales
+    MOV CX, 1
+    MOV AH,09H
+    INT 10H
+    JMP Chang
+    Blanco:
+    mov AL,NUM
+    ADD AL,30H
+    MOV BL, 0fh ;Pintar de amarillo si son iguales
+    MOV CX, 1
+    MOV AH,09H
+    INT 10H
+    MOV DL,DIR
+    MOV DH,DIR2
+    CALL Cursor
+    mov AL,NUM2
+    ADD AL,30H
+    MOV BL, 0fh ;Pintar de amarillo si son iguales
+    MOV CX, 1
+    MOV AH,09H
+    INT 10H
+    Chang:
+    ret
+    MiColor endp
     .Stack
 END programa
